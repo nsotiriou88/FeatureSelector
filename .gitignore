@@ -1,0 +1,24 @@
+# Git ignore file for files/folders to exclude.
+
+# Folders
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# Files
+*DS_Store
+*.pyc
+*.ipynb_notebooks
+*.log
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.idea/*
+.vscode/*
