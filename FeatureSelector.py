@@ -14,7 +14,7 @@ __version__ = '0.1'
 # Import libraries
 import pandas as pd
 import numpy as np
-from statsmodels.stats.outliers_influence import variance_inflation_fact
+from statsmodels.stats.outliers_influence import variance_inflation_factor
 import scorecardpy as scpy
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -66,7 +66,7 @@ def transformations(X, combine=False):
             X_tf[name] = power_transform((X_tf[col]+1).values.reshape(-1,1),\
                 method='box-cox') 
         else:
-            name = col+'YEO_JON'
+            name = col+'_YEO_JON'
             X_tf[name] = power_transform(X_tf[col].values.reshape(-1,1),\
                 method='yeo-johnson')
         X_tf = X_tf.drop(col, axis=1) 
@@ -346,7 +346,7 @@ def filter_transformed(scores, identifiers=['_BOX_COX', '_YEO_JON']):
     return (scores_new, transformed, original_index)
 
 
-def calculate_metrics(scores, cv_results, criterion, clf_choose):
+def _calculate_metrics(scores, cv_results, criterion, clf_choose):
     '''
     This function registers necessary metrics to a given dictionary during the
     recursive factor elimination process. It returns the dictionary.
@@ -432,7 +432,7 @@ def calculate_metrics(scores, cv_results, criterion, clf_choose):
     return scores
 
 
-def ranking_rfe(feat_stats): 
+def _ranking_rfe(feat_stats): 
     '''
     This function returns the scores in ranking format. It also returns the
     'featstats' in DataFrame format.
@@ -450,7 +450,7 @@ def ranking_rfe(feat_stats):
     results = results.rank(axis=0, ascending=True, method='average',
         na_option='top').round().astype(np.int)
     results = results.sum(axis=1)
-    results = results.rank(ascending=True, metbod='average',
+    results = results.rank(ascending=True, method='average',
         na_option='top').round().astype(np.int) 
     results.name = None
 
@@ -543,13 +543,13 @@ def Recursive_Factor_EliminationCV(estimator, X, y, step=1,
     k = 0
     feat_stats = {}
     scores = dict(best_train=dict(accuracy=[], roc_auc=[], recall=[],
-                  precision=[], f1=[]),
+                  precision=[], f1=[], gini=[]),
                   best_test=dict(accuracy=[], roc_auc=[], recall=[],
-                  precision=[], f1=[]),
+                  precision=[], f1=[], gini=[]),
                   mean_train=dict(accuracy=[], roc_auc=[], recall=[],
-                  precision=[], f1=[]),
+                  precision=[], f1=[], gini=[]),
                   mean_test=dict(accuracy=[], roc_auc=[], recall=[],
-                  precision=[], f1=[]),
+                  precision=[], f1=[], gini=[]),
                   best_estimator=[])
     temp_feat = X.columns.to_numpy()
     if standardise:
@@ -568,7 +568,7 @@ def Recursive_Factor_EliminationCV(estimator, X, y, step=1,
             cv=skf, scoring=['accuracy','roc_auc','recall','precision','f1'],
             return_train_score=True, return_estimator=True)
         #calculate metrics and stats
-        scores = calculate_metrics(scores, cv_results, criterion, clf_choose)
+        scores = _calculate_metrics(scores, cv_results, criterion, clf_choose)
         feat_stats[k]['features'] = temp_feat
         if hasattr(scores['best_estimator'][0], 'coef_'):
             feat_stats[k]['values'] = scores['best_estimator'][0].coef_[0]
@@ -597,7 +597,7 @@ def Recursive_Factor_EliminationCV(estimator, X, y, step=1,
         scoring=['accuracy','roc_auc','recall','precision','f1'],
         return_train_score=True, return_estimator=True)
     #calculate metrics and stats
-    scores = calculate_metrics(scores, cv_results, criterion, clf_choose)
+    scores = _calculate_metrics(scores, cv_results, criterion, clf_choose)
     feat_stats[k]['features'] = temp_feat
     if hasattr(scores['best_estimator'][0], 'coef_'):
         feat_stats[k]['values'] = scores['best_estimator'][0].coef_[0]
@@ -608,12 +608,12 @@ def Recursive_Factor_EliminationCV(estimator, X, y, step=1,
         print('ERROR: Estimator not supporting "coef_" or "feature_importances_".')
         return
     #rank and present results in dataframe
-    results, feat_stats = ranking_rfe(feat_stats)
+    results, feat_stats = _ranking_rfe(feat_stats)
 
     return (results, feat_stats, scores)
 
 
-def calculate_vif(df, features=None, n_jobs=None):
+def _calculate_vif(df, features=None, n_jobs=None):
     '''
     Calculates VIF and returns values in DataFrame format.
     
@@ -659,14 +659,14 @@ def remove_bottom_performers(df, remove=1, vif_col='VIF'):
     Parameters
     ----------
     df: pd.DataFrame
-    Dataframe containing the VIF scores from 'calculate_vif'.
+    Dataframe containing the VIF scores from '_calculate_vif'.
 
     remove: int, default 1
     How many bottom performing features to remove.
 
     vif_col: str, default 'VIF'
     Name of the column that contains the VIF scores. It defaults to 'VIF' as
-    given from the 'calculate_vif' function.
+    given from the '_calculate_vif' function.
 
     Returns
     -------
@@ -739,7 +739,7 @@ def Recursive_Elimination_VIF(df, step=1, threashold=10.0,
 
     for ii in tqdm(range(df.shape[1]-step, min_features_to_select, -step),
         desc='Progress: '):
-        vif = calculate_vif(df, features=features, n_jobs=n_jobs)
+        vif = _calculate_vif(df, features=features, n_jobs=n_jobs)
         #check removing factor(s)
         to_drop = vif.sort_values(by='VIF', ascending=False,
             ignore_index=False).head(step)
@@ -770,7 +770,7 @@ def Recursive_Elimination_VIF(df, step=1, threashold=10.0,
     return (vif, drop_order)
 
 
-def Forward_Elimination_UIF(df, scores, topk=None, score_col=None, step=1,
+def Forward_Elimination_VIF(df, scores, topk=None, score_col=None, step=1,
                             threashold=10.0, verbose=False, n_jobs=None):
     '''
     Performs recursive factor elimination in a forward manner. It removes
@@ -854,7 +854,7 @@ def Forward_Elimination_UIF(df, scores, topk=None, score_col=None, step=1,
 
     for ii in tqdm(range(scores.shape[0]-topk-step, 0, -step),
         desc='Progress: '):
-        vif = calculate_vif(df, features=features, n_jobs=n_jobs)
+        vif = _calculate_vif(df, features=features, n_jobs=n_jobs)
         #check removing factor(s)
         to_drop = vif.sort_values(by='VIF', ascending=False,
             ignore_index=False).head(step)
