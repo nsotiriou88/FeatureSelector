@@ -7,5 +7,5 @@ Requirements:
 ## TODO
 
 - Add requirements
-- Example Notebook
+- Example Notebook complete
 - Update readme file

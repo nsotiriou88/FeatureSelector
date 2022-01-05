@@ -215,7 +215,7 @@ def mitest(X, y, n_neighbors=3, mi_vals=False):
 
     Returns
     -------
-    results: pd.DataSeries or tuple (ranks, p_vals)
+    results: pd.DataSeries or tuple (ranks, mi_vals)
     Ranked features based on their score performance. If "mi_vals" is set to
     True, then it also returns original MI values in a second Series object.
     '''
