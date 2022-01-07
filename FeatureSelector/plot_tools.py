@@ -9,7 +9,7 @@ Created on Wed Jan 5 11:18:19 2022
 '''
 
 # Version. Increase with changes/development (master.dev.minor_changes)
-__version__ = '0.2'
+__version__ = '0.3'
 
 # Import libraries
 import numpy as np
@@ -20,6 +20,57 @@ import matplotlib.pyplot as plt
 ##########################################################
 #               Module Plotting Functions                #
 ##########################################################
+def plot_feature_comparison(scores, norm=False, label=None, title=None,
+                            figsize=(17, 8), savefig=None):
+    '''
+    This function plots a bar graph the feature comparison based on the provided
+    metric value or rank score.
+
+    Parameters
+    ----------
+    scores: pd.Series or array-like
+    Score values array, based on rank score or metric.
+    
+    norm: bool, default False
+    If values need to be normalised based on max value.
+
+    label: str, default None
+    Label to be used for the scoring graph.
+
+    title: str, default None
+    Title to be used for the scoring graph.
+
+    figsize: tuple, default: (17, 8)
+    Matplotlib figure size.
+
+    savefig: str, default None
+    Weather to save figure or not. It should be the full path+name of the
+    location to be saved. eg. '/repos/figure3.png' or just 'figure3.png' to save
+    it in the current folder under the given name.
+    '''
+    scores = scores.copy()
+    if norm:
+        scores /= scores.max()
+    if label is None:
+        label = 'Score Values'
+    if title is None:
+        title = 'Comparing feature selection'
+    
+    sns.set_style('darkgrid')
+    plt.figure(figsize=figsize)
+    plt.bar(np.arange(1, len(scores)+1), scores, width=0.3, label=label)
+    plt.title(title)
+    plt.xlabel('Feature number')
+    plt.axis('tight')
+    plt.legend(loc='upper right')
+    
+    if savefig is not None:
+        plt.savefig(savefig, dpi=320)
+    plt.show()
+
+    return
+
+
 def plot_metrics_check(cv_scores, sharey=False, savefig=None):
     '''
     This function plots the metrics accumulated over the iterations of feature
@@ -79,6 +130,7 @@ def plot_metrics_check(cv_scores, sharey=False, savefig=None):
 
 
 def plot_feature_performance(feat_stats, topk=None, iteration=None,
+                             from_iteration=None, to_iteration=None,
                              legend=False, savefig=None):
     '''
     This function plots the metrics accumulated over the iterations of feature
@@ -96,9 +148,17 @@ def plot_feature_performance(feat_stats, topk=None, iteration=None,
     'iteration' is None, it will get the topk features from the last iteration.
     
     iteration: int, default None
-    Select which iteration to consider for the topk features. If not set, it
-    will get the last iteration. If 'topk' is not set, this parameter is
+    Select which iteration to consider for considering the topk features. If not
+    set, it will get the last iteration. If 'topk' is not set, this parameter is
     ignored.
+    
+    from_iteration: int, default None
+    Select which iteration to consider for start plotting. If not set, it will
+    start from the first iteration.
+    
+    to_iteration: int, default None
+    Select which iteration to consider for end plotting. If not set, it will
+    start from the first iteration.
 
     legend: bool, default False
     Control if legend will be visible. Can help in case of many variables if not
@@ -109,11 +169,16 @@ def plot_feature_performance(feat_stats, topk=None, iteration=None,
     location to be saved. eg. '/repos/figure3.png' or just 'figure3.png' to save
     it in the current folder under the given name.
     '''
+    df = feat_stats.copy() # not changing original
+    #check start
+    if from_iteration is None:
+        from_iteration = 0
+    
     sns.set_style('white')
     fig, ax = plt.subplots(1, 1)
     fig. set_size_inches(16,9)
-    df = feat_stats.copy() # not changing original
     cols = df.columns.to_list()
+    #remove 'iter_' from column name
     for ii in range(len(cols)):
         cols[ii] = int(cols[ii].replace('iter_',''))
     df.columns = cols
@@ -123,60 +188,19 @@ def plot_feature_performance(feat_stats, topk=None, iteration=None,
         topk_feats = df.iloc[:,iteration].abs().sort_values(ascending=False)
         topk_feats = topk_feats.head(topk).index.values
         df = df.loc[topk_feats,:]
+    #transpose for plotting with pandas
     df = df.T
-    df.plot(kind='line', ax=ax, legend=legend, use_index=True,
-        title='Feature Importance vs Number of Features')
+    #filter end and start
+    if to_iteration is None:
+        df = df.iloc[from_iteration:, :]
+    else:
+        df = df.iloc[from_iteration:to_iteration, :]
+    iters = df.shape[0] #get total iterations
+    df.plot(kind='line', style='.-', ax=ax, legend=legend, use_index=True,
+        title=f'Feature Importance vs Number of Features Remaining ({iters} iterations)')
     ax.invert_xaxis()
-    if savefig is not None:
-        plt.savefig(savefig, dpi=320)
-    plt.show()
-
-    return
-
-
-def plot_feature_comparison(scores, norm=False, label=None, title=None,
-                            figsize=(17, 8), savefig=None):
-    '''
-    This function plots a bar graph the feature comparison based on the provided
-    metric value or rank score.
-
-    Parameters
-    ----------
-    scores: pd.Series or array-like
-    Score values array, based on rank score or metric.
-    
-    norm: bool, default False
-    If values need to be normalised based on max value.
-
-    label: str, default None
-    Label to be used for the scoring graph.
-
-    title: str, default None
-    Title to be used for the scoring graph.
-
-    figsize: tuple, default: (17, 8)
-    Matplotlib figure size.
-
-    savefig: str, default None
-    Weather to save figure or not. It should be the full path+name of the
-    location to be saved. eg. '/repos/figure3.png' or just 'figure3.png' to save
-    it in the current folder under the given name.
-    '''
-    if norm:
-        scores /= scores.max()
-    if label is None:
-        label = 'Score Values'
-    if title is None:
-        title = 'Comparing feature selection'
-    
-    sns.set_style('darkgrid')
-    plt.figure(figsize=figsize)
-    plt.bar(np.arange(1, len(scores)+1), scores, width=0.3, label=label)
-    plt.title(title)
-    plt.xlabel('Feature number')
-    plt.axis('tight')
-    plt.legend(loc='upper right')
-    
+    plt.ylabel('Feature importance')
+    plt.xlabel('Remaining features')
     if savefig is not None:
         plt.savefig(savefig, dpi=320)
     plt.show()

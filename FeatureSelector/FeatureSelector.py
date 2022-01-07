@@ -9,7 +9,7 @@ Created on Thu Dec 30 14:34:17 2021
 '''
 
 # Version. Increase with changes/development (master.dev.minor_changes)
-__version__ = '0.2'
+__version__ = '0.3'
 
 # Import libraries
 import pandas as pd
@@ -532,7 +532,8 @@ def Recursive_Factor_EliminationCV(estimator, X, y, step=1,
 
     feat_stats: pd.DataFrame
     All iterations and the coefficients or feature importances of the optimal
-    model.
+    model. Columns indicate the remaining features in the order of first to
+    last iteration.
 
     scores: dict
     All metrics recorded in each iteration. Includes best estimator from each

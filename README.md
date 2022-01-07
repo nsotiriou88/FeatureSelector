@@ -1,4 +1,4 @@
-# FeatureSelector - Version 0.2
+# FeatureSelector - Version 0.3
 
 Feature Selector for ML projects. It includes plotting functions as helper.
 
